@@ -1,0 +1,106 @@
+---
+title: "The Causal Impact of Temperature on Walmart Weekly Sales"
+author: "Lili Dimova"
+format: docx
+editor: visual
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r , echo=FALSE}
+# Loading required packages
+library(tidyverse)
+library(lubridate)
+library(fixest)
+library(scales)
+library(dplyr)
+
+# Load the dataset
+
+walmart_data <- read_csv("/Users/liliyadimova/Data Exploration Assignment/raw_data/Walmart_Sales.csv", show_col_types = FALSE)
+
+# Data Cleaning using dplyr
+# We convert the Date string into a date object and ensure numeric types
+walmart_clean <- walmart_data %>%
+  mutate(Date = dmy(Date)) %>%
+  filter(!is.na(Weekly_Sales))
+
+# Saving the clean data
+write_csv(walmart_clean, "Walmart_Sales_Clean.csv")
+```
+
+## Introduction
+
+As global temperatures rise, retailers are looking at environmental issues to forecast future revenue stability. This study focuses on the short-term effects of temperature variations on consumer behavior at Walmart.
+
+**Research Question:** In these stores, do higher temperatures causally affect weekly sales?
+
+Understanding this relation is critical for Walmart to minimize any negative consequences of increasing temperatures on its bottom line.
+
+## Data Description
+
+The dataset consists of 6,435 weekly observations from 45 Walmart stores. The key variables include:
+
+-   **Weekly_Sales:** the sales for the given store in the given week.
+
+-   **Temperature:** the average temperature in the region (in Fahrenheit).
+
+-   **Holiday_Flag:** whether the week is a special holiday week (1) or not.
+
+-   **CPI:** the consumer price index.
+
+-   **Unemployment:** the unemployment rate in the region.
+
+```{r, echo=FALSE}
+
+# Summarizing the distribution of key variables
+walmart_clean %>% 
+  select(Weekly_Sales, Temperature, Unemployment) %>% 
+  summary()
+```
+
+## Results
+
+### Exploratory Data Analysis
+
+To illustrate the correlation between heat and company operations, I plot Weekly Sales vs. Temperature. A linear trend line illustrates an initial view of the association.
+
+```{r, echo=FALSE}
+ggplot(walmart_clean, aes(x = Temperature, y = Weekly_Sales)) +
+  geom_point(alpha = 0.2, color = "steelblue") +
+  geom_smooth(method = "lm", color = "darkred") +
+  scale_y_continuous(labels = label_dollar()) +
+  labs(title = "Relationship Between Temperature and Weekly Sales",
+       subtitle = "Initial linear trend line suggests a slight negative correlation",
+       x = "Temperature (Fahrenheit)",
+       y = "Weekly Sales ($)") +
+  theme_minimal()
+```
+
+**Graph Interpretation:** The scatter plot illustrates the relationship between weekly temperature and Walmart's total sales. On the horizontal axis (x) is the temperature in Fahrenheit, and on the vertical (y) axis - the dollar amount of sales. We can see a large cluster of data points and a red trend line slopes slightly downward as it moves from left to right. Therefore, the visual clue tells us that as the weather gets hotter, weekly sales generally tend to decrease. There are also several high-reaching dots far above the line, which represent "outlier" weeks where sales were unusually high, likely due to holiday shopping or high-performing store locations.
+
+This graph shows us that higher temperatures truly may have negative consequences on Walmart's revenue. The effect doesn't seem too big visually, but the downward slope contributes to the idea that rising temperatures could lead to lower customer spending or reduced foot traffic. The dots are really spread out, meaning temperature isn't the only factor for moving these numbers. Therefore, we need a regression analysis to help us confirm if temperature is really the "cause" of sales decrease after we encounter the other important factors such as holidays and unemployment.
+
+### Causal Regression Analysis
+
+```{r, echo=FALSE}
+
+# Including Store and Month fixed effects to control for constant store-specific 
+# factors and seasonal trends.
+res_model <- feols(Weekly_Sales ~ Temperature + Holiday_Flag + Unemployment | Store, 
+                   data = walmart_clean)
+
+summary(res_model)
+```
+
+**Regression interpretation:** The regression resulted in temperature having a statistically negative impact on Walmart's weekly sales. The coefficient for Temperature is approximately -938. For every one-degree increase in temperature, a store's weekly sales decrease by about \$938 (even after we account for holidays and local unemployment rates). The 3 stars (\*\*\*) indicate that this result is very reliable and not just a random coincidence.
+
+In connection to the research question, these results confirm that higher temperatures are indeed harmful to sales in these stores. The 'holiday weeks' factor increases sales by over \$72,000 on average, unlike the higher unemployment that drops sales by about \$16,759 for every point it rise; both rising temperatures and unemployment affect Walmart revenues negatively. This implies that a warmer environment is a real problem for Walmart's long-term financial stability as it constitutes a steady "tax" on their weekly profits.
+
+## Conclusion
+
+The data offers compelling evidence that Walmart's weekly sales are negatively impacted by rising temperatures. After adjusting for store-specific variations and holiday impacts, the regression model showed that sales decreased by around \$938 for every degree of temperature increase. Even if individual graph points displayed a great deal of fluctuation, the statistical significance of my findings (shown by the p-value and "stars" from the output) demonstrate that the cooling effect on revenue is not just a random coincidence.
+
+Walmart may continue facing tough times to improve its financial performance as long as average temperatures keep rising. Holiday promotions give a significant temporary lift to the bottom line, but unfortunately, they do not entirely compensate for the ongoing losses associated with warmer weather and higher unemployment rates. To protect future earnings, Walmart should investigate why heat decreases sales—whether owing to decreased foot traffic or changes in product demand—and come up with strategic modifications to avoid these environmental consequences.
